@@ -1,27 +1,36 @@
 import { useState } from "react";
 import api from "../api/axios";
+import toast from "react-hot-toast";
 
 export default function GateDashboard() {
   const [vehicleNumber, setVehicleNumber] = useState("");
   const [vehicleType, setVehicleType] = useState("");
   const [driverName, setDriverName] = useState("");
-  const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     try {
+      setLoading(true);
+
       await api.post("/gate/register", {
         vehicleNumber,
         vehicleType,
         driverName,
       });
 
-      setSuccess("Vehicle registered successfully");
+      toast.success("Vehicle registered successfully");
+
       setVehicleNumber("");
       setVehicleType("");
       setDriverName("");
-    } catch {
-      setSuccess("Error registering vehicle");
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message || "Error registering vehicle"
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -37,17 +46,11 @@ export default function GateDashboard() {
               localStorage.clear();
               window.location.reload();
             }}
-            className="text-red-500 text-sm"
+            className="text-red-500 text-sm font-semibold"
           >
             Logout
           </button>
         </div>
-
-        {success && (
-          <div className="mb-4 text-center text-green-600 text-sm">
-            {success}
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
@@ -76,9 +79,14 @@ export default function GateDashboard() {
 
           <button
             type="submit"
-            className="w-full bg-primary text-white py-3 rounded-lg hover:bg-secondary transition"
+            disabled={loading}
+            className={`w-full py-3 rounded-lg text-white transition ${
+              loading
+                ? "bg-gray-400"
+                : "bg-primary hover:bg-secondary"
+            }`}
           >
-            Register Vehicle
+            {loading ? "Registering..." : "Register Vehicle"}
           </button>
         </form>
       </div>

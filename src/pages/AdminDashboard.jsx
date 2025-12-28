@@ -16,20 +16,32 @@ export default function AdminDashboard() {
       setLoading(true);
 
       const vehicleRes = await api.get("/admin/vehicles");
-      setVehicles(vehicleRes.data);
-
       const receiptRes = await api.get("/admin/receipts");
-      setReceipts(receiptRes.data);
 
-      const revenue = receiptRes.data.reduce(
+      // ✅ SAFETY CHECKS (IMPORTANT)
+      const vehicleList = Array.isArray(vehicleRes.data)
+        ? vehicleRes.data
+        : [];
+
+      const receiptList = Array.isArray(receiptRes.data)
+        ? receiptRes.data
+        : [];
+
+      setVehicles(vehicleList);
+      setReceipts(receiptList);
+
+      const revenue = receiptList.reduce(
         (sum, r) => sum + (r.totalAmount || 0),
         0
       );
       setTotalRevenue(revenue);
 
-    // eslint-disable-next-line no-unused-vars
     } catch (err) {
+      console.error(err);
       toast.error("Failed to load admin data");
+      setVehicles([]);
+      setReceipts([]);
+      setTotalRevenue(0);
     } finally {
       setLoading(false);
     }
@@ -48,19 +60,18 @@ export default function AdminDashboard() {
   };
 
   // ========================
-  // DOWNLOAD CSV (JWT SAFE)
+  // DOWNLOAD CSV
   // ========================
   const downloadCsv = async () => {
     try {
-      const res = await api.get(
-        "/admin/receipts/export",
-        { responseType: "blob" }
-      );
+      const res = await api.get("/admin/receipts/export", {
+        responseType: "blob",
+      });
 
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", "yard-receipts.csv");
+      link.download = "yard-receipts.csv";
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -72,7 +83,7 @@ export default function AdminDashboard() {
   };
 
   // ========================
-  // UI
+  // LOADING STATE
   // ========================
   if (loading) {
     return (
@@ -97,7 +108,7 @@ export default function AdminDashboard() {
         </button>
       </header>
 
-      {/* ================= STATS ================= */}
+      {/* STATS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
         <div className="bg-white shadow-card rounded-xl p-6">
           <p className="text-gray-500">Total Vehicles</p>
@@ -117,7 +128,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* ================= CSV ================= */}
+      {/* CSV */}
       <button
         onClick={downloadCsv}
         className="mb-8 bg-primary text-white px-6 py-3 rounded-lg hover:bg-secondary transition"
@@ -125,43 +136,47 @@ export default function AdminDashboard() {
         Download Receipts CSV
       </button>
 
-      {/* ================= VEHICLE TABLE ================= */}
+      {/* VEHICLES TABLE */}
       <div className="bg-white shadow-card rounded-xl p-6 mb-10">
         <h2 className="text-lg font-semibold mb-4">
           All Vehicles Status
         </h2>
 
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="p-3 text-left">Vehicle</th>
-              <th className="p-3 text-left">Driver</th>
-              <th className="p-3 text-left">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {vehicles.map((v) => (
-              <tr key={v.id} className="border-b">
-                <td className="p-3">{v.vehicleNumber}</td>
-                <td className="p-3">{v.driverName}</td>
-                <td
-                  className={`p-3 font-semibold ${
-                    v.status === "EXITED"
-                      ? "text-green-600"
-                      : v.status === "IN_YARD"
-                      ? "text-orange-500"
-                      : "text-gray-600"
-                  }`}
-                >
-                  {v.status}
-                </td>
+        {vehicles.length === 0 ? (
+          <p className="text-gray-500">No vehicles found</p>
+        ) : (
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="p-3 text-left">Vehicle</th>
+                <th className="p-3 text-left">Driver</th>
+                <th className="p-3 text-left">Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {vehicles.map((v) => (
+                <tr key={v.id} className="border-b">
+                  <td className="p-3">{v.vehicleNumber}</td>
+                  <td className="p-3">{v.driverName}</td>
+                  <td
+                    className={`p-3 font-semibold ${
+                      v.status === "EXITED"
+                        ? "text-green-600"
+                        : v.status === "IN_YARD"
+                        ? "text-orange-500"
+                        : "text-gray-600"
+                    }`}
+                  >
+                    {v.status}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
-      {/* ================= RECEIPTS ================= */}
+      {/* RECEIPTS */}
       <div className="bg-white shadow-card rounded-xl p-6">
         <h2 className="text-lg font-semibold mb-4">
           Payment Receipts
